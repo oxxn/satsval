@@ -6,22 +6,54 @@ use tower_http::services::ServeFile;
 
 #[derive(Deserialize)]
 struct Amt {
-    amt: f64,
+    amt: String,
+}
+
+fn parse_amount(amt_str: &str) -> f64 {
+    amt_str.parse::<f64>().unwrap_or(0.0)
+}
+
+fn format_amount(amount: f64, decimal_places: usize) -> String {
+    let integer_part = amount.trunc() as i64;
+    let fractional_part = amount.fract();
+
+    let mut formatted_integer = format!("{}", integer_part)
+        .chars()
+        .rev()
+        .collect::<Vec<_>>()
+        .chunks(3)
+        .map(|chunk| chunk.iter().collect::<String>())
+        .collect::<Vec<_>>()
+        .join(",")
+        .chars()
+        .rev()
+        .collect::<String>();
+
+    if formatted_integer.starts_with('-') && formatted_integer.chars().nth(1) == Some(',') {
+        formatted_integer.remove(1);
+    }
+
+    let formatted_fractional = format!("{:.*}", decimal_places, fractional_part.abs());
+
+    format!("{}.{}", formatted_integer, &formatted_fractional[2..])
 }
 
 async fn convert_btc_to_usd(amt: Query<Amt>) -> Html<String> {
-    let exchange_rate = 41254.0; // Example exchange rate
-    let usd_value = amt.amt * exchange_rate;
+    let exchange_rate = 41254.0;
+    let usd_value = parse_amount(&amt.amt) * exchange_rate;
+    let formatted_usd = format_amount(usd_value, 8);
     Html(html! {
-        input id="usd" name="amt" type="text" hx-trigger="input" hx-get="/convert_usd_to_btc" hx-target="#btc" hx-swap="outerHTML" value=(usd_value) {}
+        input id="usd" name="amt" type="text" hx-trigger="input" hx-get="/convert_usd_to_btc" hx-target="#btc" hx-swap="outerHTML" value=(formatted_usd) {}
     }.into_string())
 }
 
 async fn convert_usd_to_btc(amt: Query<Amt>) -> Html<String> {
-    let exchange_rate = 41254.0; // Example exchange rate
-    let btc_value = amt.amt / exchange_rate;
+    let exchange_rate = 41254.0;
+    let mut btc_value = parse_amount(&amt.amt) / exchange_rate;
+    btc_value = btc_value.min(21_000_000.0);
+    let formatted_btc = format_amount(btc_value, 8);
     Html(html! {
-        input id="btc" name="amt" type="text" hx-trigger="input" hx-get="/convert_btc_to_usd" hx-target="#usd" hx-swap="outerHTML" value=(btc_value) {}
+        input id="btc" name="amt" type="text" hx-trigger="input" hx-get="/convert_btc_to_usd" hx-target="#usd" hx-swap="outerHTML" value=(formatted_btc) {}
     }.into_string())
 }
 
