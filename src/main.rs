@@ -1,8 +1,12 @@
 use axum::{extract::Query, response::Html, routing::get, Router};
-use maud::html;
-use maud::DOCTYPE;
+use maud::{html, Markup, DOCTYPE};
 use serde::Deserialize;
+use std::time::Duration;
+use tokio::time::sleep;
 use tower_http::services::ServeFile;
+mod utils;
+
+const MAX_MONEY: f64 = 21_000_000.0;
 
 #[derive(Deserialize)]
 struct CurrencyAmount {
@@ -10,50 +14,45 @@ struct CurrencyAmount {
     currency: String, // 'BTC' or 'USD'
 }
 
-fn truncate_decimal_part(input: &str) -> String {
-    let parts = input.split('.').collect::<Vec<&str>>();
-
-    match parts.as_slice() {
-        [int_part, decimal_part] => {
-            let truncated_decimal = &decimal_part[..decimal_part.len().min(8)];
-            format!("{}.{}", int_part, truncated_decimal)
+fn currency_input_markup(btc_value: &str, usd_value: &str) -> Markup {
+    html! {
+        fieldset role="group" {
+            input
+                id="btc"
+                name="amount"
+                type="text"
+                hx-trigger="input, keyup"
+                hx-get="/convert_currency"
+                hx-vals=r#"{"currency": "BTC"}"#
+                hx-target="#currency-converter"
+                hx-swap="innerHTML"
+                hx-on:mousedown="this.select(); event.preventDefault();"
+                hx-on:onmouseup="event.preventDefault();"
+                value=(btc_value) {}
+            input
+                type="text"
+                value="BTC"
+                readonly {}
         }
-        _ => input.to_string(),
+        fieldset role="group" {
+            input
+                id="usd"
+                name="amount"
+                type="text"
+                hx-trigger="input, keyup"
+                hx-get="/convert_currency"
+                hx-vals=r#"{"currency": "USD"}"#
+                hx-target="#currency-converter"
+                hx-swap="innerHTML"
+                hx-on:mousedown="this.select(); event.preventDefault();"
+                hx-on:onmouseup="event.preventDefault();"
+                value=(usd_value) {}
+            input
+                type="text"
+                readonly
+                value="USD" {}
+        }
     }
-}
-
-fn format_with_commas(num: f64, decimals: u32) -> String {
-    let num_as_str = num.to_string();
-    let parts = num_as_str.split('.').collect::<Vec<&str>>();
-    let int_part = parts[0];
-
-    let formatted_int = int_part
-        .chars()
-        .rev()
-        .enumerate()
-        .fold(String::new(), |mut acc, (i, c)| {
-            if i % 3 == 0 && i != 0 {
-                acc.push(',');
-            }
-            acc.push(c);
-            acc
-        })
-        .chars()
-        .rev()
-        .collect::<String>();
-
-    let decimal_part = if parts.len() > 1 {
-        let dec = parts[1].chars().take(decimals as usize).collect::<String>();
-        if !dec.is_empty() {
-            format!(".{}", dec)
-        } else {
-            String::new()
-        }
-    } else {
-        String::new()
-    };
-
-    format!("{}{}", formatted_int, decimal_part)
 }
 
 async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
@@ -74,74 +73,31 @@ async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
 
     let (btc_value, usd_value) = match cur_amt.currency.as_str() {
         "BTC" => {
-            let btc = if amount > 21_000_000.0 {
-                21_000_000.0
+            let btc = if amount > MAX_MONEY {
+                MAX_MONEY
             } else {
                 amount
             };
             let usd = btc * exchange_rate;
-            if amount > 21_000_000.0 {
-                ("21,000,000".to_string(), format_with_commas(usd, 2))
+            if amount > MAX_MONEY {
+                ("21,000,000".to_string(), utils::format_with_commas(usd, 2))
             } else {
                 (
-                    truncate_decimal_part(&cur_amt.amount.clone()),
-                    format_with_commas(usd, 2),
+                    utils::truncate_decimal_part(&cur_amt.amount.clone()),
+                    utils::format_with_commas(usd, 2),
                 )
             }
         }
         "USD" => {
             let mut btc = amount / exchange_rate;
-            btc = if btc > 21_000_000.0 {
-                21_000_000.0
-            } else {
-                btc
-            };
+            btc = if btc > MAX_MONEY { MAX_MONEY } else { btc };
 
-            (format_with_commas(btc, 8), cur_amt.amount.clone())
+            (utils::format_with_commas(btc, 8), cur_amt.amount.clone())
         }
         _ => ("0".to_string(), "0".to_string()),
     };
 
-    let markup = html! {
-        fieldset role="group" {
-            input
-                id="btc"
-                name="amount"
-                type="text"
-                hx-trigger="input, keyup"
-                hx-get="/convert_currency"
-                hx-vals="{\"currency\": \"BTC\"}"
-                hx-target="#currency-converter"
-                hx-swap="innerHTML"
-                hx-on:mousedown="this.select(); event.preventDefault();"
-                hx-on:onmouseup="event.preventDefault();"
-                value=(btc_value) {}
-            input
-                type="text"
-                value="BTC"
-                readonly {}
-        }
-        fieldset role="group" {
-            input
-                id="usd"
-                name="amount"
-                type="text"
-                hx-trigger="input, keyup"
-                hx-get="/convert_currency"
-                hx-vals="{\"currency\": \"USD\"}"
-                hx-target="#currency-converter"
-                hx-swap="innerHTML"
-                hx-on:mousedown="this.select(); event.preventDefault();"
-                hx-on:onmouseup="event.preventDefault();"
-                value=(usd_value) {}
-            input
-                type="text"
-                readonly
-                value="USD" {}
-        }
-    };
-
-    Html(markup.into_string())
+    Html(currency_input_markup(&btc_value, &usd_value).into_string())
 }
 
 async fn root() -> Html<String> {
@@ -173,42 +129,7 @@ async fn root() -> Html<String> {
             }
             main class="container" {
                 div id="currency-converter" {
-                    fieldset role="group" {
-                        input
-                            id="btc"
-                            name="amount"
-                            type="text"
-                            hx-trigger="input, keyup"
-                            hx-get="/convert_currency"
-                            hx-vals="{\"currency\": \"BTC\"}"
-                            hx-target="#currency-converter"
-                            hx-swap="innerHTML"
-                            hx-on:mousedown="this.select(); event.preventDefault();"
-                            hx-on:onmouseup="event.preventDefault();"
-                            value="1" {}
-                        input
-                            type="text"
-                            value="BTC"
-                            readonly {}
-                    }
-                    fieldset role="group" {
-                        input
-                            id="usd"
-                            name="amount"
-                            type="text"
-                            hx-trigger="input, keyup"
-                            hx-get="/convert_currency"
-                            hx-vals="{\"currency\": \"USD\"}"
-                            hx-target="#currency-converter"
-                            hx-swap="innerHTML"
-                            hx-on:mousedown="this.select(); event.preventDefault();"
-                            hx-on:onmouseup="event.preventDefault();"
-                            value="41,654" {}
-                        input
-                            type="text"
-                            value="USD"
-                            readonly {}
-                    }
+                    (currency_input_markup("1", "41,654"))
                 }
             }
         }
@@ -217,8 +138,23 @@ async fn root() -> Html<String> {
     Html(markup.into_string())
 }
 
+async fn update_exchange_rate_periodically() {
+    loop {
+        match utils::fetch_exchange_rate().await {
+            Ok(rate) => {
+                println!("{}", rate);
+            }
+            Err(_) => {
+                println!("Error getting exchange rate.")
+            }
+        }
+        sleep(Duration::from_secs(3)).await;
+    }
+}
+
 #[tokio::main]
 async fn main() {
+    tokio::spawn(update_exchange_rate_periodically());
     let app = Router::new()
         .route("/", get(root))
         .route("/convert_currency", get(convert_currency))
