@@ -10,13 +10,26 @@ struct CurrencyAmount {
     currency: String, // 'BTC' or 'USD'
 }
 
+fn truncate_decimal_part(input: &str) -> String {
+    let parts = input.split('.').collect::<Vec<&str>>();
+
+    match parts.as_slice() {
+        [int_part, decimal_part] => {
+            let truncated_decimal = &decimal_part[..decimal_part.len().min(8)];
+            format!("{}.{}", int_part, truncated_decimal)
+        }
+        _ => input.to_string(),
+    }
+}
+
 fn format_with_commas(num: f64, decimals: u32) -> String {
     let num_as_str = num.to_string();
     let parts = num_as_str.split('.').collect::<Vec<&str>>();
-    let int_part = parts[0].chars().rev().collect::<String>();
+    let int_part = parts[0];
 
     let formatted_int = int_part
         .chars()
+        .rev()
         .enumerate()
         .fold(String::new(), |mut acc, (i, c)| {
             if i % 3 == 0 && i != 0 {
@@ -70,7 +83,10 @@ async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
             if amount > 21_000_000.0 {
                 ("21,000,000".to_string(), format_with_commas(usd, 2))
             } else {
-                (cur_amt.amount.clone(), format_with_commas(usd, 2))
+                (
+                    truncate_decimal_part(&cur_amt.amount.clone()),
+                    format_with_commas(usd, 2),
+                )
             }
         }
         "USD" => {
@@ -86,45 +102,46 @@ async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
         _ => ("0".to_string(), "0".to_string()),
     };
 
-    Html(
-        html! {
-            fieldset role="group" {
-                input
-                    id="btc"
-                    name="amount"
-                    type="text"
-                    hx-trigger="input, keyup"
-                    hx-get="/convert_currency"
-                    hx-vals="{\"currency\": \"BTC\"}"
-                    hx-target="#currency-converter"
-                    hx-swap="innerHTML"
-                    hx-on:click="this.select();"
-                    value=(btc_value) {}
-                input
-                    type="text"
-                    value="BTC"
-                    readonly {}
-            }
-            fieldset role="group" {
-                input
-                    id="usd"
-                    name="amount"
-                    type="text"
-                    hx-trigger="input, keyup"
-                    hx-get="/convert_currency"
-                    hx-vals="{\"currency\": \"USD\"}"
-                    hx-target="#currency-converter"
-                    hx-swap="innerHTML"
-                    hx-on:click="this.select();"
-                    value=(usd_value) {}
-                input
-                    type="text"
-                    readonly
-                    value="USD" {}
-            }
+    let markup = html! {
+        fieldset role="group" {
+            input
+                id="btc"
+                name="amount"
+                type="text"
+                hx-trigger="input, keyup"
+                hx-get="/convert_currency"
+                hx-vals="{\"currency\": \"BTC\"}"
+                hx-target="#currency-converter"
+                hx-swap="innerHTML"
+                hx-on:mousedown="this.select(); event.preventDefault();"
+                hx-on:onmouseup="event.preventDefault();"
+                value=(btc_value) {}
+            input
+                type="text"
+                value="BTC"
+                readonly {}
         }
-        .into_string(),
-    )
+        fieldset role="group" {
+            input
+                id="usd"
+                name="amount"
+                type="text"
+                hx-trigger="input, keyup"
+                hx-get="/convert_currency"
+                hx-vals="{\"currency\": \"USD\"}"
+                hx-target="#currency-converter"
+                hx-swap="innerHTML"
+                hx-on:mousedown="this.select(); event.preventDefault();"
+                hx-on:onmouseup="event.preventDefault();"
+                value=(usd_value) {}
+            input
+                type="text"
+                readonly
+                value="USD" {}
+        }
+    };
+
+    Html(markup.into_string())
 }
 
 async fn root() -> Html<String> {
@@ -166,7 +183,8 @@ async fn root() -> Html<String> {
                             hx-vals="{\"currency\": \"BTC\"}"
                             hx-target="#currency-converter"
                             hx-swap="innerHTML"
-                            hx-on:click="this.select();"
+                            hx-on:mousedown="this.select(); event.preventDefault();"
+                            hx-on:onmouseup="event.preventDefault();"
                             value="1" {}
                         input
                             type="text"
@@ -183,7 +201,8 @@ async fn root() -> Html<String> {
                             hx-vals="{\"currency\": \"USD\"}"
                             hx-target="#currency-converter"
                             hx-swap="innerHTML"
-                            hx-on:click="this.select();"
+                            hx-on:mousedown="this.select(); event.preventDefault();"
+                            hx-on:onmouseup="event.preventDefault();"
                             value="41,654" {}
                         input
                             type="text"
@@ -192,7 +211,6 @@ async fn root() -> Html<String> {
                     }
                 }
             }
-
         }
     };
 
