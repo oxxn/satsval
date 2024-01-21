@@ -2,7 +2,6 @@ use axum::{extract::Query, response::Html, routing::get, Router};
 use maud::html;
 use maud::DOCTYPE;
 use serde::Deserialize;
-use tokio::time::error::Elapsed;
 use tower_http::services::ServeFile;
 
 #[derive(Deserialize)]
