@@ -44,7 +44,7 @@ fn format_with_commas(num: f64, decimals: u32) -> String {
 }
 
 async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
-    let exchange_rate = 41254.0;
+    let exchange_rate = 41654.0;
     let mut cleaned_amount = String::new();
     let mut decimal_found = false;
 
@@ -86,16 +86,45 @@ async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
         _ => ("0".to_string(), "0".to_string()),
     };
 
-    Html(html! {
-        fieldset role="group" {
-            input id="btc" name="amount" type="text" hx-trigger="input, keyup" hx-get="/convert_currency" hx-vals="{\"currency\": \"BTC\"}" hx-target="#currency-converter" hx-swap="innerHTML" value=(btc_value) {}
-            input type="text" readonly value="BTC" {}
+    Html(
+        html! {
+            fieldset role="group" {
+                input
+                    id="btc"
+                    name="amount"
+                    type="text"
+                    hx-trigger="input, keyup"
+                    hx-get="/convert_currency"
+                    hx-vals="{\"currency\": \"BTC\"}"
+                    hx-target="#currency-converter"
+                    hx-swap="innerHTML"
+                    hx-on:click="this.select();"
+                    value=(btc_value) {}
+                input
+                    type="text"
+                    value="BTC"
+                    readonly {}
+            }
+            fieldset role="group" {
+                input
+                    id="usd"
+                    name="amount"
+                    type="text"
+                    hx-trigger="input, keyup"
+                    hx-get="/convert_currency"
+                    hx-vals="{\"currency\": \"USD\"}"
+                    hx-target="#currency-converter"
+                    hx-swap="innerHTML"
+                    hx-on:click="this.select();"
+                    value=(usd_value) {}
+                input
+                    type="text"
+                    readonly
+                    value="USD" {}
+            }
         }
-        fieldset role="group" {
-            input id="usd" name="amount" type="text" hx-trigger="input, keyup" hx-get="/convert_currency" hx-vals="{\"currency\": \"USD\"}" hx-target="#currency-converter" hx-swap="innerHTML" value=(usd_value) {}
-            input type="text" readonly value="USD" {}
-        }
-    }.into_string())
+        .into_string(),
+    )
 }
 
 async fn root() -> Html<String> {
@@ -128,12 +157,38 @@ async fn root() -> Html<String> {
             main class="container" {
                 div id="currency-converter" {
                     fieldset role="group" {
-                        input id="btc" name="amount" type="text" hx-trigger="input, keyup" hx-get="/convert_currency" hx-vals="{\"currency\": \"BTC\"}" hx-target="#currency-converter" hx-swap="innerHTML" value="1" {}
-                        input type="text" readonly value="BTC" {}
+                        input
+                            id="btc"
+                            name="amount"
+                            type="text"
+                            hx-trigger="input, keyup"
+                            hx-get="/convert_currency"
+                            hx-vals="{\"currency\": \"BTC\"}"
+                            hx-target="#currency-converter"
+                            hx-swap="innerHTML"
+                            hx-on:click="this.select();"
+                            value="1" {}
+                        input
+                            type="text"
+                            value="BTC"
+                            readonly {}
                     }
                     fieldset role="group" {
-                        input id="usd" name="amount" type="text" hx-trigger="input, keyup" hx-get="/convert_currency" hx-vals="{\"currency\": \"USD\"}" hx-target="#currency-converter" hx-swap="innerHTML" value="41254" {}
-                        input type="text" readonly value="USD" {}
+                        input
+                            id="usd"
+                            name="amount"
+                            type="text"
+                            hx-trigger="input, keyup"
+                            hx-get="/convert_currency"
+                            hx-vals="{\"currency\": \"USD\"}"
+                            hx-target="#currency-converter"
+                            hx-swap="innerHTML"
+                            hx-on:click="this.select();"
+                            value="41,654" {}
+                        input
+                            type="text"
+                            value="USD"
+                            readonly {}
                     }
                 }
             }
