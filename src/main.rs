@@ -129,7 +129,7 @@ async fn root(state: State<Arc<Mutex<AppState>>>) -> Html<String> {
                 input[readonly] {
                     font-size: 80px !important;
                     height: 110px !important;
-                    width: 5ch !important;
+                    width: 4.5ch !important;
                 }
            ")}
         }
