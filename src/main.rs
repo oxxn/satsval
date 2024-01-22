@@ -173,9 +173,7 @@ async fn main() {
     let state = Arc::new(Mutex::new(AppState { exchange_rate: 0.0 }));
 
     let state_clone = state.clone();
-    tokio::spawn(async move {
-        fetch_exchange_rate(state_clone).await;
-    });
+    tokio::spawn(fetch_exchange_rate(state_clone));
 
     let app = Router::new()
         .route("/", get(root))
