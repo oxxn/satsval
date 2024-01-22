@@ -1,8 +1,6 @@
 use axum::{extract::Query, response::Html, routing::get, Router};
 use maud::{html, Markup, DOCTYPE};
 use serde::Deserialize;
-use std::time::Duration;
-use tokio::time::sleep;
 use tower_http::services::ServeFile;
 mod utils;
 
@@ -56,7 +54,7 @@ fn currency_input_markup(btc_value: &str, usd_value: &str) -> Markup {
 }
 
 async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
-    let exchange_rate = 41654.0;
+    let exchange_rate = utils::fetch_exchange_rate().await.unwrap_or(0.0);
     let mut cleaned_amount = String::new();
     let mut decimal_found = false;
 
@@ -101,6 +99,7 @@ async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
 }
 
 async fn root() -> Html<String> {
+    let exchange_rate = utils::fetch_exchange_rate().await.unwrap_or(0.0);
     let markup = html! {
         (DOCTYPE)
         head {
@@ -129,7 +128,7 @@ async fn root() -> Html<String> {
             }
             main class="container" {
                 div id="currency-converter" {
-                    (currency_input_markup("1", "41,654"))
+                    (currency_input_markup("1", &exchange_rate.to_string()))
                 }
             }
         }
@@ -138,23 +137,8 @@ async fn root() -> Html<String> {
     Html(markup.into_string())
 }
 
-async fn update_exchange_rate_periodically() {
-    loop {
-        match utils::fetch_exchange_rate().await {
-            Ok(rate) => {
-                println!("{}", rate);
-            }
-            Err(_) => {
-                println!("Error getting exchange rate.")
-            }
-        }
-        sleep(Duration::from_secs(3)).await;
-    }
-}
-
 #[tokio::main]
 async fn main() {
-    tokio::spawn(update_exchange_rate_periodically());
     let app = Router::new()
         .route("/", get(root))
         .route("/convert_currency", get(convert_currency))

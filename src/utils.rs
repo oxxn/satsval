@@ -1,5 +1,9 @@
 use reqwest;
 use serde_json;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
+static LAST_FETCHED: Mutex<Option<(f64, Instant)>> = Mutex::new(None);
 
 pub fn truncate_decimal_part(input: &str) -> String {
     let parts = input.split('.').collect::<Vec<&str>>();
@@ -48,6 +52,13 @@ pub fn format_with_commas(num: f64, decimals: u32) -> String {
 }
 
 pub async fn fetch_exchange_rate() -> Result<f64, reqwest::Error> {
+    let mut last_fetched = LAST_FETCHED.lock().unwrap();
+    if let Some((rate, time)) = *last_fetched {
+        if time.elapsed() < Duration::new(3, 0) {
+            return Ok(rate);
+        }
+    }
+
     let url = "https://api.coinbase.com/v2/exchange-rates?currency=BTC";
     let client = reqwest::Client::new();
     let res = client.get(url).send().await?;
@@ -61,5 +72,6 @@ pub async fn fetch_exchange_rate() -> Result<f64, reqwest::Error> {
         .parse()
         .unwrap_or(0.0);
 
+    *last_fetched = Some((rate, Instant::now()));
     Ok(rate)
 }
