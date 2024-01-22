@@ -1,10 +1,18 @@
-use axum::{extract::Query, response::Html, routing::get, Router};
+use axum::{extract::Query, extract::State, response::Html, routing::get, Router};
 use maud::{html, Markup, DOCTYPE};
 use serde::Deserialize;
+use std::sync::{Arc, Mutex};
 use tower_http::services::ServeFile;
 mod utils;
+use reqwest;
+use serde_json;
 
 const MAX_MONEY: f64 = 21_000_000.0;
+
+#[derive(Clone)]
+struct AppState {
+    exchange_rate: f64,
+}
 
 #[derive(Deserialize)]
 struct CurrencyAmount {
@@ -53,8 +61,11 @@ fn currency_input_markup(btc_value: &str, usd_value: &str) -> Markup {
     }
 }
 
-async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
-    let exchange_rate = utils::fetch_exchange_rate().await.unwrap_or(0.0);
+async fn convert_currency(
+    State(state): State<Arc<Mutex<AppState>>>,
+    cur_amt: Query<CurrencyAmount>,
+) -> Html<String> {
+    let exchange_rate = state.lock().unwrap().exchange_rate;
     let mut cleaned_amount = String::new();
     let mut decimal_found = false;
 
@@ -99,7 +110,6 @@ async fn convert_currency(cur_amt: Query<CurrencyAmount>) -> Html<String> {
 }
 
 async fn root() -> Html<String> {
-    let exchange_rate = utils::fetch_exchange_rate().await.unwrap_or(0.0);
     let markup = html! {
         (DOCTYPE)
         head {
@@ -128,7 +138,7 @@ async fn root() -> Html<String> {
             }
             main class="container" {
                 div id="currency-converter" {
-                    (currency_input_markup("1", &exchange_rate.to_string()))
+                    (currency_input_markup("1", "40,300"))
                 }
             }
         }
@@ -137,11 +147,37 @@ async fn root() -> Html<String> {
     Html(markup.into_string())
 }
 
+async fn fetch_exchange_rate(state: Arc<Mutex<AppState>>) -> Result<(), reqwest::Error> {
+    let url = "https://api.coinbase.com/v2/exchange-rates?currency=BTC";
+    let client = reqwest::Client::new();
+    let res = client.get(url).send().await?;
+
+    let json: serde_json::Value = res.json().await?;
+    let rate = json["data"]["rates"]["USD"]
+        .as_str()
+        .unwrap_or("0")
+        .parse()
+        .unwrap_or(0.0);
+
+    let mut state = state.lock().unwrap();
+    state.exchange_rate = rate;
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
+    let state = Arc::new(Mutex::new(AppState { exchange_rate: 0.0 }));
+
+    let state_clone = state.clone();
+    tokio::spawn(async move {
+        fetch_exchange_rate(state_clone).await.unwrap();
+    });
+
     let app = Router::new()
         .route("/", get(root))
         .route("/convert_currency", get(convert_currency))
+        .with_state(state)
         .nest_service(
             "/static/htmx.min.js",
             ServeFile::new("./static/htmx.min.js"),
