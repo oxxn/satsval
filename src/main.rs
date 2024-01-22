@@ -27,7 +27,7 @@ fn currency_input_markup(btc_value: &str, usd_value: &str) -> Markup {
                 id="btc"
                 name="amount"
                 type="text"
-                hx-trigger="input, keyup, every 3s"
+                hx-trigger="input, keyup, every 5s"
                 hx-get="/convert_currency"
                 hx-vals=r#"{"currency": "BTC"}"#
                 hx-target="#currency-converter"
@@ -139,7 +139,7 @@ async fn root(state: State<Arc<Mutex<AppState>>>) -> Html<String> {
             }
             main class="container" {
                 div id="currency-converter" {
-                    (currency_input_markup("1", &exchange_rate.to_string()))
+                    (currency_input_markup("1", &utils::format_with_commas(exchange_rate, 2)))
                 }
             }
         }
@@ -149,7 +149,7 @@ async fn root(state: State<Arc<Mutex<AppState>>>) -> Html<String> {
 }
 
 async fn fetch_exchange_rate(state: Arc<Mutex<AppState>>) -> () {
-    let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3));
+    let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
     loop {
         interval.tick().await;
         let url = "https://api.coinbase.com/v2/exchange-rates?currency=BTC";
