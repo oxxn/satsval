@@ -148,15 +148,15 @@ async fn root(state: State<Arc<Mutex<AppState>>>) -> Html<String> {
     Html(markup.into_string())
 }
 
-async fn fetch_exchange_rate(state: Arc<Mutex<AppState>>) -> Result<(), reqwest::Error> {
+async fn fetch_exchange_rate(state: Arc<Mutex<AppState>>) -> () {
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3));
     loop {
         interval.tick().await;
         let url = "https://api.coinbase.com/v2/exchange-rates?currency=BTC";
         let client = reqwest::Client::new();
-        let res = client.get(url).send().await?;
+        let res = client.get(url).send().await.unwrap();
 
-        let json: serde_json::Value = res.json().await?;
+        let json: serde_json::Value = res.json().await.unwrap();
         let rate = json["data"]["rates"]["USD"]
             .as_str()
             .unwrap_or("0")
@@ -174,7 +174,7 @@ async fn main() {
 
     let state_clone = state.clone();
     tokio::spawn(async move {
-        fetch_exchange_rate(state_clone).await.unwrap();
+        fetch_exchange_rate(state_clone).await;
     });
 
     let app = Router::new()
