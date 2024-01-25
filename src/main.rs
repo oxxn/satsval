@@ -11,6 +11,12 @@ async fn root() -> Html<String> {
                 meta name="viewport" content="width=device-width, initial-scale=1.0" {}
                 title { "SATSVAL" }
                 style { r#"
+                    @font-face {
+                        font-family: 'Geologica';
+                        src: url('/static/Geologica-Regular.ttf') format('truetype');
+                        font-weight: normal;
+                        font-style: normal;
+                    }
                     body, html {
                         margin: 0;
                         padding: 0;
@@ -38,7 +44,11 @@ async fn root() -> Html<String> {
 async fn main() {
     let app = Router::new()
         .route("/", get(root))
-        .nest_service("/static/script.js", ServeFile::new("./static/script.js"));
+        .nest_service("/static/script.js", ServeFile::new("./static/script.js"))
+        .nest_service(
+            "/static/Geologica-Regular.ttf",
+            ServeFile::new("./static/Geologica-Regular.ttf"),
+        );
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await

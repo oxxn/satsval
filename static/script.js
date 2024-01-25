@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function setupTextStyles() {
-        ctx.font = '70px Helvetica';
+        ctx.font = '70px Geologica';
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2; 
@@ -48,23 +48,33 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function drawTextsAndRectangles() {
         const middleY = canvas.height / (2 * scale);
-        const textHeight = 60;
-        const padding = 20;
+        const padding = 25;
         const totalWidth = calculateTotalWidth();
+        const tallestTextHeight = calculateTallestTextHeight();
         let currentX = (canvas.width / scale - totalWidth) / 2;
 
         texts.forEach((text, index) => {
             const textWidth = ctx.measureText(text).width;
             currentX += textWidth / 2;
-            ctx.fillText(text, currentX, middleY);
-            if (text !== "=") drawRectangleAroundText(textWidth, currentX, middleY, textHeight, padding, index);
+            ctx.fillText(text, currentX, middleY + 5);
+            if (text !== "=") drawRectangleAroundText(textWidth, currentX, middleY, tallestTextHeight, padding, index);
             currentX += textWidth / 2 + padding;
         });
     }
 
+    function calculateTallestTextHeight() {
+        return texts.reduce((tallest, text) => {
+            const metrics = ctx.measureText(text);
+            const actualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+            return Math.max(tallest, actualHeight);
+        }, 0);
+    }
+
     function drawRectangleAroundText(textWidth, currentX, middleY, textHeight, padding, index) {
-        ctx.strokeRect(currentX - textWidth / 2 - padding / 2, middleY - textHeight / 2 - padding / 2, textWidth + padding, textHeight + padding);
-        if (editingIndex === index && cursorVisible) drawCursor(currentX, middleY, textHeight, textWidth);
+        const rectX = currentX - textWidth / 2 - padding / 2;
+        const rectY = middleY - textHeight / 2 - padding / 2;
+        ctx.strokeRect(rectX, rectY, textWidth + padding, textHeight + padding);
+        if (editingIndex === index && cursorVisible) drawCursor(currentX, middleY, textHeight + padding, textWidth);
     }
 
     function drawCursor(currentX, middleY, textHeight, textWidth) {
@@ -72,8 +82,8 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 2; 
         ctx.beginPath();
-        ctx.moveTo(cursorX, middleY - textHeight / 2);
-        ctx.lineTo(cursorX, middleY + textHeight / 2);
+        ctx.moveTo(cursorX, middleY - textHeight / 2.4);
+        ctx.lineTo(cursorX, middleY + textHeight / 2.4);
         ctx.stroke();
         ctx.strokeStyle = 'white';
     }
