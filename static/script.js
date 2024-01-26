@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // Adjust base font size and padding dynamically based on screen size
         baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 50;
         padding = baseFontSize / 0.6;  // Adjust padding in proportion to font size
-        ctx.font = `${baseFontSize}px Geologica`;
+        ctx.font = `${baseFontSize}px Unna`;
         draw();
     }
 
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function drawSATSVAL() {
         const fontSize = baseFontSize * 2; // Larger font for SATSVAL
-        ctx.font = `${fontSize}px Geologica`; // Set the font size
+        ctx.font = `${fontSize}px Unna`; // Set the font size
         ctx.fillStyle = 'white'; // Set the text color
         ctx.textAlign = 'left';
         // Calculate the position based on baseFontSize
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function setupTextStyles() {
-        ctx.font = `${baseFontSize * 3.5}px Geologica`; // Adjust font size for main texts
+        ctx.font = `${baseFontSize * 3.5}px Unna`; // Adjust font size for main texts
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'white';
         ctx.lineWidth = baseFontSize * 0.06;
@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             }
     
-            ctx.fillText(text, currentX, middleY + baseFontSize * 0.25);
+            ctx.fillText(text, currentX, middleY + baseFontSize * 0.13);
     
             // Reset for other elements
             ctx.fillStyle = 'white';
