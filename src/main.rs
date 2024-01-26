@@ -38,7 +38,7 @@ async fn root() -> Html<String> {
             }
             body {
                 canvas id="canvas" {}
-                script src="/static/script.js" {}
+                script src="/static/script.min.js" {}
             }
         }
     };
@@ -47,7 +47,7 @@ async fn root() -> Html<String> {
 }
 
 async fn script_js() -> impl IntoResponse {
-    let content = include_str!("../static/script.js");
+    let content = include_str!("../static/script.min.js");
     let body = Body::from(content);
     let mut response = Response::new(body);
     response.headers_mut().insert(
@@ -72,7 +72,7 @@ async fn geologica_regular_ttf() -> impl IntoResponse {
 async fn main() {
     let app = Router::new()
         .route("/", get(root))
-        .route("/static/script.js", get(script_js))
+        .route("/static/script.min.js", get(script_js))
         .route("/static/Geologica-Regular.ttf", get(geologica_regular_ttf));
 
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
