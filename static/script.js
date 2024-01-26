@@ -12,6 +12,9 @@ document.addEventListener("DOMContentLoaded", function() {
     let activeIndex = 0; // Initialize active field to text[0]
     let lastGoodExchangeValues = { BTC: "1", USD: "1" }; // Store last good exchange values
 
+    let baseFontSize;
+    let basePadding;
+
     function initializeCanvas() {
         resizeCanvas();
         window.addEventListener("resize", resizeCanvas);
@@ -27,7 +30,9 @@ document.addEventListener("DOMContentLoaded", function() {
         canvas.width = Math.floor(window.innerWidth * scale);
         canvas.height = Math.floor(window.innerHeight * scale);
         ctx.scale(scale, scale);
-        const baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 20;
+        // Adjust base font size and padding dynamically based on screen size
+        baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 50;
+        basePadding = baseFontSize / 0.6;  // Adjust padding in proportion to font size
         ctx.font = `${baseFontSize}px Geologica`;
         draw();
     }
@@ -40,8 +45,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function drawSATSVAL() {
-        const baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 20;
-        ctx.font = `${baseFontSize}px Geologica`;
+        ctx.font = `${baseFontSize * 2}px Geologica`; // Larger font for SATSVAL
         ctx.fillStyle = 'white'; // Set the text color
         ctx.textAlign = 'left';
         ctx.fillText("SATSVAL", 10, 35); // Draw "SATSVAL" at the calculated position
@@ -52,18 +56,17 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function setupTextStyles() {
-        const baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 15;
-        ctx.font = `${baseFontSize}px Geologica`;
+        ctx.font = `${baseFontSize * 3.5}px Geologica`; // Adjust font size for main texts
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'white';
-        ctx.lineWidth = 2; 
+        ctx.lineWidth = baseFontSize * 0.06;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
     }
 
     function drawTextsAndRectangles() {
         const middleY = canvas.height / (2 * scale);
-        const padding = 25;
+        const padding = basePadding;
         const totalWidth = calculateTotalWidth();
         const tallestTextHeight = calculateTallestTextHeight();
         let currentX = (canvas.width / scale - totalWidth) / 2;
@@ -82,7 +85,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             }
     
-            ctx.fillText(text, currentX, middleY + 5);
+            ctx.fillText(text, currentX, middleY + baseFontSize * 0.25);
     
             // Reset for other elements
             ctx.fillStyle = 'white';
@@ -108,13 +111,17 @@ document.addEventListener("DOMContentLoaded", function() {
         const rectX = currentX - textWidth / 2 - padding / 2;
         const rectY = middleY - textHeight / 2 - padding / 2;
         ctx.strokeRect(rectX, rectY, textWidth + padding, textHeight + padding);
-        if (editingIndex === index && cursorVisible) drawCursor(currentX, middleY, textHeight + padding, textWidth);
+        
+        // Draw cursor for editing index
+        if (editingIndex === index && cursorVisible) {
+            drawCursor(currentX, middleY, textHeight + padding, textWidth);
+        }
     }
 
     function drawCursor(currentX, middleY, textHeight, textWidth) {
         const cursorX = currentX + textWidth / 2 + 2;
         ctx.strokeStyle = '#CC0000';
-        ctx.lineWidth = 2; 
+        ctx.lineWidth = baseFontSize * 0.06;
         ctx.beginPath();
         ctx.moveTo(cursorX, middleY - textHeight / 2.4);
         ctx.lineTo(cursorX, middleY + textHeight / 2.4);
