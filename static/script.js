@@ -3,13 +3,14 @@ document.addEventListener("DOMContentLoaded", function() {
     const ctx = canvas.getContext("2d");
     const scale = window.devicePixelRatio;
 
-    let texts = ["...", "BTC", "=", "...", "USD"];
+    let texts = ["1", "BTC", "=", "1", "USD"];
     let editingIndex = -1;
     let cursorVisible = true;
     let lastUpdateTime = 0;
     let exchangeRate = 0;
     let numberOpacity = 1;
     let activeIndex = 0; // Initialize active field to text[0]
+    let lastGoodExchangeValues = { BTC: "1", USD: "1" }; // Store last good exchange values
 
     function initializeCanvas() {
         resizeCanvas();
@@ -60,12 +61,12 @@ document.addEventListener("DOMContentLoaded", function() {
             currentX += textWidth / 2;
     
             if (index === 0 || index === 3) {
-                ctx.fillStyle = index === activeIndex ? '#CCFFCC' : 'white'; // Active field in yellow
+                ctx.fillStyle = index === activeIndex ? '#CCFFCC' : 'white'; // Active field in green
             }
             
             // Adjust opacity for exchange rate text
-            if (index === 0 || index === 3) {  // Assuming indices 0 and 3 are for BTC and USD values
-                ctx.globalAlpha = numberOpacity;  // Apply opacity
+            if (index === 0 || index === 3) {
+                ctx.globalAlpha = index === activeIndex ? 1 : numberOpacity;  // Apply opacity
 
             }
     
@@ -143,14 +144,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 texts[editingIndex] += key;
             }
     
-            const editedValue = parseFloat(texts[editingIndex]) || 0;
             if (editingIndex === 0) { // If BTC value is edited
-                updateExchangeValues("BTC", editedValue);
+                updateExchangeValues("BTC", texts[editingIndex]);
             } else if (editingIndex === 3) { // If USD value is edited
-                updateExchangeValues("USD", editedValue);
+                updateExchangeValues("USD", texts[editingIndex]);
             }
         }
-    }
+    }    
 
     function getCanvasRelativeCoords(event) {
         const rect = canvas.getBoundingClientRect();
@@ -190,7 +190,6 @@ document.addEventListener("DOMContentLoaded", function() {
         }, -1);
     }
     
-
     function updateCursor() {
         const currentTime = Date.now();
         if (currentTime - lastUpdateTime > 500) {
@@ -207,8 +206,23 @@ document.addEventListener("DOMContentLoaded", function() {
             const response = await fetch(url);
             const rateData = await response.json();
             exchangeRate = parseFloat(rateData.data.rates.USD);
-            const btcValue = parseFloat(texts[0]) || 1; // Fallback to 1 if parsing fails
-            updateExchangeValues("BTC", btcValue); // Update with current BTC value
+    
+            // Only update values if the active field contains a valid number
+            let activeValue = parseFloat(texts[activeIndex]);
+            if (!isNaN(activeValue)) {
+                if (activeIndex === 0) { // Active field is BTC
+                    updateExchangeValues("BTC", texts[0]);
+                } else if (activeIndex === 3) { // Active field is USD
+                    updateExchangeValues("USD", texts[3]);
+                }
+            } else {
+                // If the active field's value is not valid, update the inactive field with the last good value
+                if (activeIndex === 0) {
+                    texts[3] = lastGoodExchangeValues.USD;
+                } else if (activeIndex === 3) {
+                    texts[0] = lastGoodExchangeValues.BTC;
+                }
+            }
             draw(); // Redraw canvas with new values
         } catch (error) {
             console.error("Error fetching BTC to USD rate:", error);
@@ -219,16 +233,29 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         animateExchangeRateFadeIn();
     }
+    
 
     function updateExchangeValues(editedCurrency, editedValue) {
         if (exchangeRate === 0) return; // Skip if exchange rate is not available
-
+    
+        let numericValue = parseFloat(editedValue);
+    
         if (editedCurrency === "BTC") {
-            texts[0] = editedValue.toString();
-            texts[3] = (editedValue * exchangeRate).toFixed(2); // Convert BTC to USD
+            texts[0] = editedValue; // Keep the user input as-is
+            if (!isNaN(numericValue)) {
+                texts[3] = (numericValue * exchangeRate).toFixed(2);
+                lastGoodExchangeValues.USD = texts[3];
+            } else {
+                texts[3] = lastGoodExchangeValues.USD; // Keep the last good value if input doesn't parse
+            }
         } else if (editedCurrency === "USD") {
-            texts[3] = editedValue.toString();
-            texts[0] = (editedValue / exchangeRate).toFixed(8); // Convert USD to BTC
+            texts[3] = editedValue; // Keep the user input as-is
+            if (!isNaN(numericValue)) {
+                texts[0] = (numericValue / exchangeRate).toFixed(8);
+                lastGoodExchangeValues.BTC = texts[0];
+            } else {
+                texts[0] = lastGoodExchangeValues.BTC; // Keep the last good value if input doesn't parse
+            }
         }
     }
 
