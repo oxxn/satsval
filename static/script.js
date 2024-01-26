@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // Calculate the position based on baseFontSize
         const xPosition = baseFontSize; // Adjust as needed for horizontal positioning
         const yPosition = fontSize; // Position it at approximately one font size down from the top
-        ctx.fillText("SATSVAL", xPosition, yPosition); // Draw "SATSVAL" at the calculated position
+        ctx.fillText("satsval", xPosition, yPosition); // Draw "SATSVAL" at the calculated position
     }
     
     function clearCanvas() {
@@ -312,6 +312,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 texts[0] = lastGoodExchangeValues.BTC; // Keep the last good value if input doesn't parse
             }
         }
+        document.title = texts[3] + " USD - satsval";
     }
     
     function formatBTCValue(value) {
