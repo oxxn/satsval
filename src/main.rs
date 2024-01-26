@@ -25,7 +25,7 @@ async fn root() -> Html<String> {
                         overflow: hidden;
                     }
                     #canvas {
-                        background-color: #333333;
+                        background-color: #222222;
                         display: block;
                     }
                 "# }

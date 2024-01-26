@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const ctx = canvas.getContext("2d");
     const scale = window.devicePixelRatio;
 
-    let texts = ["1", "BTC", "=", "1", "USD"];
+    let texts = ["1", "BTC", "=", "......", "USD"];
     let editingIndex = -1;
     let cursorVisible = true;
     let lastUpdateTime = 0;
@@ -27,13 +27,24 @@ document.addEventListener("DOMContentLoaded", function() {
         canvas.width = Math.floor(window.innerWidth * scale);
         canvas.height = Math.floor(window.innerHeight * scale);
         ctx.scale(scale, scale);
+        const baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 20;
+        ctx.font = `${baseFontSize}px Geologica`;
         draw();
     }
 
     function draw() {
         clearCanvas();
+        drawSATSVAL();
         setupTextStyles();
         drawTextsAndRectangles();
+    }
+
+    function drawSATSVAL() {
+        const baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 20;
+        ctx.font = `${baseFontSize}px Geologica`;
+        ctx.fillStyle = 'white'; // Set the text color
+        ctx.textAlign = 'left';
+        ctx.fillText("SATSVAL", 10, 35); // Draw "SATSVAL" at the calculated position
     }
 
     function clearCanvas() {
@@ -41,7 +52,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function setupTextStyles() {
-        ctx.font = '70px Geologica';
+        const baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 15;
+        ctx.font = `${baseFontSize}px Geologica`;
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2; 
