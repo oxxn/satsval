@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function drawCursor(currentX, middleY, textHeight, textWidth) {
         const cursorX = currentX + textWidth / 2 + 2;
-        ctx.strokeStyle = '#9D0000';
+        ctx.strokeStyle = '#CC0000';
         ctx.lineWidth = 2; 
         ctx.beginPath();
         ctx.moveTo(cursorX, middleY - textHeight / 2.4);
@@ -122,6 +122,15 @@ document.addEventListener("DOMContentLoaded", function() {
             texts[1] = texts[1] === "BTC" ? "SAT" : "BTC";
             editingIndex = -1;
             cursorVisible = false;
+    
+            // Recalculate exchange values based on the new unit
+            let activeValue = texts[activeIndex === 0 ? 0 : 3];
+            if (activeValue !== "") {
+                updateExchangeValues(activeIndex === 0 ? "BTC" : "USD", activeValue);
+            } else {
+                texts[0] = "0";
+                texts[3] = "0";
+            }
         } else if (index === -1 || index === 4) {
             editingIndex = -1;
             cursorVisible = false;
@@ -207,20 +216,31 @@ document.addEventListener("DOMContentLoaded", function() {
             const rateData = await response.json();
             exchangeRate = parseFloat(rateData.data.rates.USD);
     
-            // Only update values if the active field contains a valid number
-            let activeValue = parseFloat(texts[activeIndex]);
-            if (!isNaN(activeValue)) {
-                if (activeIndex === 0) { // Active field is BTC
-                    updateExchangeValues("BTC", texts[0]);
-                } else if (activeIndex === 3) { // Active field is USD
-                    updateExchangeValues("USD", texts[3]);
+            let activeValue = texts[activeIndex];
+    
+            // Check if the active field is empty and set the other field to 0
+            if (activeValue === "") {
+                if (activeIndex === 0) {
+                    texts[3] = "0"; // Set USD to 0 if BTC is empty
+                } else if (activeIndex === 3) {
+                    texts[0] = "0"; // Set BTC to 0 if USD is empty
                 }
             } else {
-                // If the active field's value is not valid, update the inactive field with the last good value
-                if (activeIndex === 0) {
-                    texts[3] = lastGoodExchangeValues.USD;
-                } else if (activeIndex === 3) {
-                    texts[0] = lastGoodExchangeValues.BTC;
+                // Only update values if the active field contains a valid number
+                let numericValue = parseFloat(activeValue);
+                if (!isNaN(numericValue)) {
+                    if (activeIndex === 0) { // Active field is BTC
+                        updateExchangeValues("BTC", texts[0]);
+                    } else if (activeIndex === 3) { // Active field is USD
+                        updateExchangeValues("USD", texts[3]);
+                    }
+                } else {
+                    // If the active field's value is not valid, update the inactive field with the last good value
+                    if (activeIndex === 0) {
+                        texts[3] = lastGoodExchangeValues.USD;
+                    } else if (activeIndex === 3) {
+                        texts[0] = lastGoodExchangeValues.BTC;
+                    }
                 }
             }
             draw(); // Redraw canvas with new values
@@ -232,8 +252,7 @@ document.addEventListener("DOMContentLoaded", function() {
             draw();
         }
         animateExchangeRateFadeIn();
-    }
-    
+    }         
 
     function updateExchangeValues(editedCurrency, editedValue) {
         if (exchangeRate === 0) return; // Skip if exchange rate is not available
@@ -242,23 +261,84 @@ document.addEventListener("DOMContentLoaded", function() {
     
         if (editedCurrency === "BTC") {
             texts[0] = editedValue; // Keep the user input as-is
-            if (!isNaN(numericValue)) {
-                texts[3] = (numericValue * exchangeRate).toFixed(2);
+            if (editedValue === "") {
+                texts[3] = "0"; // Set USD to 0 if BTC is empty
+            } else if (!isNaN(numericValue)) {
+                // Adjust for Satoshis if needed
+                let conversionFactor = texts[1] === "SAT" ? 100000000 : 1;
+                let convertedValue = numericValue * exchangeRate / conversionFactor;
+    
+                convertedValue = roundToSignificantDigits(convertedValue, 4);
+                texts[3] = formatUSDValue(convertedValue);
                 lastGoodExchangeValues.USD = texts[3];
             } else {
                 texts[3] = lastGoodExchangeValues.USD; // Keep the last good value if input doesn't parse
             }
         } else if (editedCurrency === "USD") {
             texts[3] = editedValue; // Keep the user input as-is
-            if (!isNaN(numericValue)) {
-                texts[0] = (numericValue / exchangeRate).toFixed(8);
+            if (editedValue === "") {
+                texts[0] = "0"; // Set BTC to 0 if USD is empty
+            } else if (!isNaN(numericValue)) {
+                // Adjust for Satoshis if needed
+                let conversionFactor = texts[1] === "SAT" ? 100000000 : 1;
+                let convertedValue = numericValue / exchangeRate * conversionFactor;
+    
+                if (texts[1] === "SAT") {
+                    convertedValue = Math.floor(convertedValue);
+                } else {
+                    convertedValue = roundToSignificantDigits(convertedValue, 4);
+                }
+    
+                texts[0] = formatBTCValue(convertedValue);
                 lastGoodExchangeValues.BTC = texts[0];
             } else {
                 texts[0] = lastGoodExchangeValues.BTC; // Keep the last good value if input doesn't parse
             }
         }
     }
+    
+    function formatBTCValue(value) {
+        if (value === 0)
+            return "0";
+        // Show at most 8 decimal digits for BTC
+        if (Math.abs(value) < 0.01)
+            return value.toFixed(8);
+        else
+            return value.toString(); // Ensure the return value is a string
+    }
+    
+    function formatUSDValue(value) {
+        if (value === 0)
+            return "0";
+        // Show up to 4 decimal digits for USD values between 1 and 0
+        if (Math.abs(value) > 0 && Math.abs(value) < 1) {
+            return value.toFixed(4);
+        }
+        if (Math.abs(value) > 1 && Math.abs(value) < 1000)
+            return value.toFixed(2);
+        return value.toString(); // Ensure the return value is a string
+    }
+      
 
+    function roundToSignificantDigits(num, n) {
+        if (num === 0) {
+            return 0;
+        }
+
+        const d = Math.ceil(Math.log10(Math.abs(num)));
+        const power = n - d;
+        const magnitude = Math.pow(10, power);
+        const shifted = Math.round(num * magnitude);
+        const rounded = shifted / magnitude;
+
+        // Determine the number of decimal places required
+        const decimalPlaces = power > 0 ? power : 0;
+        const formattedNumber = rounded.toFixed(decimalPlaces);
+
+        // Return the formatted number without trailing zeros
+        return parseFloat(formattedNumber);
+    }
+    
     function animateExchangeRateFadeIn() {
         numberOpacity = 0.35;
         function increaseOpacity() {
