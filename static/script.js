@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", function() {
     let cursorVisible = true;
     let lastUpdateTime = 0;
     let exchangeRate = 0;
+    let numberOpacity = 1;
+    let activeIndex = 0; // Initialize active field to text[0]
 
     function initializeCanvas() {
         resizeCanvas();
@@ -52,15 +54,34 @@ document.addEventListener("DOMContentLoaded", function() {
         const totalWidth = calculateTotalWidth();
         const tallestTextHeight = calculateTallestTextHeight();
         let currentX = (canvas.width / scale - totalWidth) / 2;
-
+    
         texts.forEach((text, index) => {
             const textWidth = ctx.measureText(text).width;
             currentX += textWidth / 2;
+    
+            if (index === 0 || index === 3) {
+                ctx.fillStyle = index === activeIndex ? '#CCFFCC' : 'white'; // Active field in yellow
+            }
+            
+            // Adjust opacity for exchange rate text
+            if (index === 0 || index === 3) {  // Assuming indices 0 and 3 are for BTC and USD values
+                ctx.globalAlpha = numberOpacity;  // Apply opacity
+
+            }
+    
             ctx.fillText(text, currentX, middleY + 5);
-            if (text !== "=") drawRectangleAroundText(textWidth, currentX, middleY, tallestTextHeight, padding, index);
+    
+            // Reset for other elements
+            ctx.fillStyle = 'white';
+            ctx.globalAlpha = 1;
+    
+            if (text !== "=") {
+                drawRectangleAroundText(textWidth, currentX, middleY, tallestTextHeight, padding, index);
+            }
+    
             currentX += textWidth / 2 + padding;
         });
-    }
+    }    
 
     function calculateTallestTextHeight() {
         return texts.reduce((tallest, text) => {
@@ -79,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function drawCursor(currentX, middleY, textHeight, textWidth) {
         const cursorX = currentX + textWidth / 2 + 2;
-        ctx.strokeStyle = 'red';
+        ctx.strokeStyle = '#9D0000';
         ctx.lineWidth = 2; 
         ctx.beginPath();
         ctx.moveTo(cursorX, middleY - textHeight / 2.4);
@@ -94,17 +115,41 @@ document.addEventListener("DOMContentLoaded", function() {
         return textWidths.reduce((acc, width) => acc + width, 0) + padding * (texts.length - 1);
     }
 
-    function onCanvasClick(event) {
-        const {x, y} = getCanvasRelativeCoords(event);
-        editingIndex = getClickedIndex(x, y);
-        if (editingIndex !== -1 && texts[editingIndex] !== "=") {
+    function handleInput(index, key) {
+        if (index === 1 && key === null) {
+            // Toggle between "BTC" and "sats" for texts[1]
+            texts[1] = texts[1] === "BTC" ? "SAT" : "BTC";
+            editingIndex = -1;
+            cursorVisible = false;
+        } else if (index === -1 || index === 4) {
+            editingIndex = -1;
+            cursorVisible = false;
+        } else if (index === 0 || index === 3) {
+            activeIndex = index;
+            editingIndex = index;
             cursorVisible = true;
             lastUpdateTime = Date.now();
             updateCursor();
         } else {
             editingIndex = -1;
+            cursorVisible = false;
         }
-        draw();
+    
+        // Handle text input
+        if (editingIndex !== -1 && key !== null) {
+            if (key === "Backspace") {
+                texts[editingIndex] = texts[editingIndex].slice(0, -1);
+            } else if (key.length === 1) {
+                texts[editingIndex] += key;
+            }
+    
+            const editedValue = parseFloat(texts[editingIndex]) || 0;
+            if (editingIndex === 0) { // If BTC value is edited
+                updateExchangeValues("BTC", editedValue);
+            } else if (editingIndex === 3) { // If USD value is edited
+                updateExchangeValues("USD", editedValue);
+            }
+        }
     }
 
     function getCanvasRelativeCoords(event) {
@@ -121,29 +166,30 @@ document.addEventListener("DOMContentLoaded", function() {
         const middleY = canvas.height / (2 * scale);
         const textHeight = 60;
         const padding = 20;
-        const totalWidth = calculateTotalWidth();
-        let currentX = (canvas.width / scale - totalWidth) / 2;
-
-        for (let i = 0; i < texts.length; i++) {
-            const text = texts[i];
-            const textWidth = ctx.measureText(text).width;
-            currentX += textWidth / 2;
-
-            if (text !== "=") {
-                const rectX = currentX - textWidth / 2 - padding / 2;
-                const rectY = middleY - textHeight / 2 - padding / 2;
-                const rectWidth = textWidth + padding;
-                const rectHeight = textHeight + padding;
-
+    
+        const calculateBoundingBox = (textWidth, currentX) => ({
+            rectX: currentX - textWidth / 2 - padding / 2,
+            rectY: middleY - textHeight / 2 - padding / 2,
+            rectWidth: textWidth + padding,
+            rectHeight: textHeight + padding
+        });
+    
+        return texts.reduce((clickedIndex, text, i) => {
+            if (clickedIndex === -1 && i !== 2) {
+                const textWidth = ctx.measureText(text).width;
+                const currentX = (canvas.width / scale - calculateTotalWidth()) / 2 
+                                + texts.slice(0, i).reduce((acc, t) => acc + ctx.measureText(t).width + padding, 0) 
+                                + textWidth / 2;
+                const { rectX, rectY, rectWidth, rectHeight } = calculateBoundingBox(textWidth, currentX);
+    
                 if (x >= rectX && x <= rectX + rectWidth && y >= rectY && y <= rectY + rectHeight) {
                     return i;
                 }
             }
-
-            currentX += textWidth / 2 + padding;
-        }
-
-        return -1;    }
+            return clickedIndex;
+        }, -1);
+    }
+    
 
     function updateCursor() {
         const currentTime = Date.now();
@@ -172,6 +218,7 @@ document.addEventListener("DOMContentLoaded", function() {
             texts[3] = "Error";
             draw();
         }
+        animateExchangeRateFadeIn();
     }
 
     function updateExchangeValues(editedCurrency, editedValue) {
@@ -186,22 +233,30 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    function animateExchangeRateFadeIn() {
+        numberOpacity = 0.35;
+        function increaseOpacity() {
+            if (numberOpacity < 1) {
+                numberOpacity += 0.015;  // Adjust fade speed here
+                draw();
+                requestAnimationFrame(increaseOpacity);
+            }
+        }
+        increaseOpacity();
+    }
+
+    function onCanvasClick(event) {
+        const { x, y } = getCanvasRelativeCoords(event);
+        const clickedIndex = getClickedIndex(x, y);
+    
+        handleInput(clickedIndex, null);
+    
+        draw();
+    }
+
     function onDocumentKeyDown(event) {
-        if (editingIndex !== -1 && texts[editingIndex] !== "=") {
-            if (event.key === "Backspace") {
-                texts[editingIndex] = texts[editingIndex].slice(0, -1);
-            } else if (event.key.length === 1) {
-                texts[editingIndex] += event.key;
-            }
-
-            if (editingIndex === 0) { // If BTC value is edited
-                const btcValue = parseFloat(texts[0]) || 0;
-                updateExchangeValues("BTC", btcValue);
-            } else if (editingIndex === 3) { // If USD value is edited
-                const usdValue = parseFloat(texts[3]) || 0;
-                updateExchangeValues("USD", usdValue);
-            }
-
+        if (editingIndex !== -1) {
+            handleInput(editingIndex, event.key);
             draw();
         }
     }
