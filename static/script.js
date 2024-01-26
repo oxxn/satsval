@@ -12,8 +12,9 @@ document.addEventListener("DOMContentLoaded", function() {
     let activeIndex = 0; // Initialize active field to text[0]
     let lastGoodExchangeValues = { BTC: "1", USD: "1" }; // Store last good exchange values
 
+    let textBoundingBoxes = [];
     let baseFontSize;
-    let basePadding;
+    let padding;
 
     function initializeCanvas() {
         resizeCanvas();
@@ -29,10 +30,15 @@ document.addEventListener("DOMContentLoaded", function() {
         canvas.style.height = window.innerHeight + "px";
         canvas.width = Math.floor(window.innerWidth * scale);
         canvas.height = Math.floor(window.innerHeight * scale);
+        console.log("canvas.style.width: ", canvas.style.width);
+        console.log("canvas.style.height: ", canvas.style.height);
+        console.log("canvas.width: ", canvas.width);
+        console.log("canvas.height: ", canvas.height);
+
         ctx.scale(scale, scale);
         // Adjust base font size and padding dynamically based on screen size
         baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 50;
-        basePadding = baseFontSize / 0.6;  // Adjust padding in proportion to font size
+        padding = baseFontSize / 0.6;  // Adjust padding in proportion to font size
         ctx.font = `${baseFontSize}px Geologica`;
         draw();
     }
@@ -69,8 +75,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function drawTextsAndRectangles() {
+        textBoundingBoxes = [];
         const middleY = canvas.height / (2 * scale);
-        const padding = basePadding;
         const totalWidth = calculateTotalWidth();
         const tallestTextHeight = calculateTallestTextHeight();
         let currentX = (canvas.width / scale - totalWidth) / 2;
@@ -96,8 +102,15 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.globalAlpha = 1;
     
             if (text !== "=") {
+                const rectX = currentX - textWidth / 2 - padding / 2;
+                const rectY = middleY - tallestTextHeight / 2 - padding / 2;
+                const rectWidth = textWidth + padding;
+                const rectHeight = tallestTextHeight + padding;
                 drawRectangleAroundText(textWidth, currentX, middleY, tallestTextHeight, padding, index);
+                textBoundingBoxes.push({ rectX, rectY, rectWidth, rectHeight });
             }
+            else
+                textBoundingBoxes.push(null);
     
             currentX += textWidth / 2 + padding;
         });
@@ -134,7 +147,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function calculateTotalWidth() {
-        const padding = 20;
         const textWidths = texts.map(text => ctx.measureText(text).width);
         return textWidths.reduce((acc, width) => acc + width, 0) + padding * (texts.length - 1);
     }
@@ -195,31 +207,13 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function getClickedIndex(x, y) {
-        const middleY = canvas.height / (2 * scale);
-        const textHeight = 60;
-        const padding = 20;
-    
-        const calculateBoundingBox = (textWidth, currentX) => ({
-            rectX: currentX - textWidth / 2 - padding / 2,
-            rectY: middleY - textHeight / 2 - padding / 2,
-            rectWidth: textWidth + padding,
-            rectHeight: textHeight + padding
-        });
-    
-        return texts.reduce((clickedIndex, text, i) => {
-            if (clickedIndex === -1 && i !== 2) {
-                const textWidth = ctx.measureText(text).width;
-                const currentX = (canvas.width / scale - calculateTotalWidth()) / 2 
-                                + texts.slice(0, i).reduce((acc, t) => acc + ctx.measureText(t).width + padding, 0) 
-                                + textWidth / 2;
-                const { rectX, rectY, rectWidth, rectHeight } = calculateBoundingBox(textWidth, currentX);
-    
-                if (x >= rectX && x <= rectX + rectWidth && y >= rectY && y <= rectY + rectHeight) {
-                    return i;
-                }
+        return textBoundingBoxes.findIndex((bbox, index) => {
+            if (bbox && texts[index] !== "=") {
+                const { rectX, rectY, rectWidth, rectHeight } = bbox;
+                return x >= rectX && x <= rectX + rectWidth && y >= rectY && y <= rectY + rectHeight;
             }
-            return clickedIndex;
-        }, -1);
+            return false;
+        });
     }
     
     function updateCursor() {
