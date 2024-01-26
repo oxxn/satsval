@@ -39,18 +39,22 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function draw() {
         clearCanvas();
-        drawSATSVAL();
         setupTextStyles();
         drawTextsAndRectangles();
+        drawSATSVAL();
     }
 
     function drawSATSVAL() {
-        ctx.font = `${baseFontSize * 2}px Geologica`; // Larger font for SATSVAL
+        const fontSize = baseFontSize * 2; // Larger font for SATSVAL
+        ctx.font = `${fontSize}px Geologica`; // Set the font size
         ctx.fillStyle = 'white'; // Set the text color
         ctx.textAlign = 'left';
-        ctx.fillText("SATSVAL", 10, 35); // Draw "SATSVAL" at the calculated position
+        // Calculate the position based on baseFontSize
+        const xPosition = baseFontSize; // Adjust as needed for horizontal positioning
+        const yPosition = fontSize; // Position it at approximately one font size down from the top
+        ctx.fillText("SATSVAL", xPosition, yPosition); // Draw "SATSVAL" at the calculated position
     }
-
+    
     function clearCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
