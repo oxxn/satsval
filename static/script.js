@@ -30,11 +30,6 @@ document.addEventListener("DOMContentLoaded", function() {
         canvas.style.height = window.innerHeight + "px";
         canvas.width = Math.floor(window.innerWidth * scale);
         canvas.height = Math.floor(window.innerHeight * scale);
-        console.log("canvas.style.width: ", canvas.style.width);
-        console.log("canvas.style.height: ", canvas.style.height);
-        console.log("canvas.width: ", canvas.width);
-        console.log("canvas.height: ", canvas.height);
-
         ctx.scale(scale, scale);
         // Adjust base font size and padding dynamically based on screen size
         baseFontSize = Math.min(window.innerWidth, window.innerHeight) / 50;
@@ -263,9 +258,6 @@ document.addEventListener("DOMContentLoaded", function() {
             draw(); // Redraw canvas with new values
         } catch (error) {
             console.error("Error fetching BTC to USD rate:", error);
-            exchangeRate = 0;
-            texts[0] = "Error";
-            texts[3] = "Error";
             draw();
         }
         animateExchangeRateFadeIn();
