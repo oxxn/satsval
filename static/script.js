@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function initializeCanvas() {
         resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener("resize", resizeCanvas);
         canvas.addEventListener("click", onCanvasClick);
         document.addEventListener("keydown", onDocumentKeyDown);
         fetchBTCtoUSD();
@@ -40,12 +40,24 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function setupTextStyles() {
-        ctx.font = '70px Geologica';
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2; 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+
+        const baseFontSize = 70; // Base font size for large screens
+        const screenWidth = window.innerWidth;
+    
+        // Adjust font size and padding based on screen width
+        if (screenWidth <= 600) { // For small screens
+            console.log()
+            ctx.font = (baseFontSize * 0.5) + 'px Geologica'; // Smaller font
+        } else if (screenWidth <= 1024) { // For medium screens
+            ctx.font = (baseFontSize * 0.75) + 'px Geologica'; // Medium font
+        } else {
+            ctx.font = baseFontSize + 'px Geologica'; // Default font
+        }
     }
 
     function drawTextsAndRectangles() {
@@ -205,9 +217,8 @@ document.addEventListener("DOMContentLoaded", function() {
         const url = "https://api.coinbase.com/v2/exchange-rates?currency=BTC";
         try {
             const response = await fetch(url);
-            const data = await response.json();
-            exchangeRate = parseFloat(data.data.rates.USD);
-
+            const rateData = await response.json();
+            exchangeRate = parseFloat(rateData.data.rates.USD);
             const btcValue = parseFloat(texts[0]) || 1; // Fallback to 1 if parsing fails
             updateExchangeValues("BTC", btcValue); // Update with current BTC value
             draw(); // Redraw canvas with new values
