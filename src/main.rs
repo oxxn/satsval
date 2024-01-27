@@ -18,8 +18,8 @@ async fn root() -> Html<String> {
                 title { "SATSVAL" }
                 style { r#"
                     @font-face {
-                        font-family: 'Unna';
-                        src: url('/static/Unna-Regular.ttf') format('truetype');
+                        font-family: 'Geologica';
+                        src: url('/static/Geologica-Regular.ttf') format('truetype');
                         font-weight: normal;
                         font-style: normal;
                     }
@@ -57,8 +57,8 @@ async fn script_js() -> impl IntoResponse {
     response
 }
 
-async fn unna_regular_ttf() -> impl IntoResponse {
-    let content = include_bytes!("../static/Unna-Regular.ttf");
+async fn geologica_regular_ttf() -> impl IntoResponse {
+    let content = include_bytes!("../static/Geologica-Regular.ttf");
     let body = Body::from(content.as_ref());
     let mut response = Response::new(body);
     response.headers_mut().insert(
@@ -73,7 +73,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(root))
         .route("/static/script.min.js", get(script_js))
-        .route("/static/Unna-Regular.ttf", get(unna_regular_ttf));
+        .route("/static/Geologica-Regular.ttf", get(geologica_regular_ttf));
 
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
     println!("Listening on {}", listener.local_addr().unwrap());
