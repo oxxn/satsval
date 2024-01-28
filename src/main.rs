@@ -46,34 +46,36 @@ async fn root() -> Html<String> {
     Html(markup.into_string())
 }
 
-async fn script_js() -> impl IntoResponse {
-    let content = include_str!("../static/script.min.js");
-    let body = Body::from(content);
-    let mut response = Response::new(body);
-    response.headers_mut().insert(
-        axum::http::header::CONTENT_TYPE,
-        HeaderValue::from_static("application/javascript"),
-    );
-    response
+macro_rules! serve_static_file {
+    ($func_name:ident, $path:expr, $content_type:expr) => {
+        async fn $func_name() -> impl IntoResponse {
+            let content = include_bytes!($path);
+            let body = Body::from(content.as_ref());
+            let mut response = Response::new(body);
+            response.headers_mut().insert(
+                axum::http::header::CONTENT_TYPE,
+                HeaderValue::from_static($content_type),
+            );
+            response
+        }
+    };
 }
 
-async fn geologica_regular_ttf() -> impl IntoResponse {
-    let content = include_bytes!("../static/Geologica-Regular.ttf");
-    let body = Body::from(content.as_ref());
-    let mut response = Response::new(body);
-    response.headers_mut().insert(
-        axum::http::header::CONTENT_TYPE,
-        HeaderValue::from_static("font/ttf"),
-    );
-    response
-}
+serve_static_file!(
+    serve_script,
+    "../static/script.min.js",
+    "application/javascript"
+);
+serve_static_file!(serve_font, "../static/Geologica-Regular.ttf", "font/ttf");
+serve_static_file!(serve_favicon, "../static/favicon.ico", "image/ico");
 
 #[tokio::main]
 async fn main() {
     let app = Router::new()
         .route("/", get(root))
-        .route("/static/script.min.js", get(script_js))
-        .route("/static/Geologica-Regular.ttf", get(geologica_regular_ttf));
+        .route("/favicon.ico", get(serve_favicon))
+        .route("/static/script.min.js", get(serve_script))
+        .route("/static/Geologica-Regular.ttf", get(serve_font));
 
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
     println!("Listening on {}", listener.local_addr().unwrap());
