@@ -16,13 +16,8 @@ async fn root() -> Html<String> {
                 meta charset="UTF-8" {}
                 meta name="viewport" content="width=device-width, initial-scale=1.0" {}
                 title { "SATSVAL" }
+                link rel="preload" href="/static/Geologica-Regular.ttf" as="font" crossorigin {}
                 style { r#"
-                    @font-face {
-                        font-family: 'Geologica';
-                        src: url('/static/Geologica-Regular.ttf') format('truetype');
-                        font-weight: normal;
-                        font-style: normal;
-                    }
                     body, html {
                         margin: 0;
                         padding: 0;
